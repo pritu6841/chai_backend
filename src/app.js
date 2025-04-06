@@ -13,6 +13,6 @@ app.use(express.json({
 
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.static("public")) // for serving static files from public directory
-app.use(cookieParser())
+app.use(cookieParser())//mere server se user ke browser se cookies ko access karne ke liye
 
 export default app
