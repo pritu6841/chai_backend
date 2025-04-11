@@ -32,12 +32,12 @@ const userSchema = new Schema({
     type: String, //cloudinary url
   },
   watchHistory: {
-    type: Schema.type.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: "video"
   },
   password: {
     type: String,
-    required: [true, "password is requirlled"],
+    required: [true, "Password is required"], // Corrected typo
   },
   refreshToken: {
     type: String,
@@ -58,7 +58,7 @@ userSchema.methods.isPasswordMatched = async function (enteredPassword) {
 userSchema.methods.getAccessToken = function () {
   return jwt.sign(
     {
-      id: this._id,
+      _id: this._id,
       email: this.email,
       username: this.username,
       fullName: this.fullName,
@@ -89,4 +89,4 @@ userSchema.methods.getRefreshToken = function () {
 }
 
 
-export const User = mongoose.connect("User", userSchema)
+export const User = mongoose.model("User", userSchema)
