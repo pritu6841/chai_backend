@@ -1,3 +1,4 @@
+// it used to handle file upload
 import multer from "multer";
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -8,4 +9,4 @@ const storage = multer.diskStorage({
   }
 })
 
-const upload = multer({ storage: storage })
+export const upload = multer({ storage: storage })
