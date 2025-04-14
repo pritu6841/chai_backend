@@ -168,31 +168,31 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken 
+  const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized request")
   }
   try {
     const decodeToken = JsonWebTokenError.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
-  
+
     const user = await User.findById(decodeToken?._id)
-  
-    if(!user){
+
+    if (!user) {
       throw new ApiError(401, "Unauthorized request, user not found")
     }
-  
-    if(user.refreshToken !== incomingRefreshToken){
+
+    if (user.refreshToken !== incomingRefreshToken) {
       throw new ApiError(401, "Refresh token not matched")
     }
-  
+
     const options = {
       httpOnly: true,
       secure: true
     }
-  
+
     const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id)
-  
+
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
@@ -203,9 +203,104 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       }, "Access token refreshed successfully"))
   } catch (error) {
     throw new ApiError(401, error?.message || "error while refreshing access token")
-    
+
   }
+
+
+
 })
 
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body
+  const user = await User.findById(req.user?._id)//hmne auth middleware me user.req = user kiya tha jiska mtlb j hm login h tb hm chnage krna chahte h to user se password le skte h
+  const isPassword = await user.isPasswordMatched(oldPassword)
+
+  if (!isPassword) {
+    throw new ApiError(400, 'Inavlid old password')
+  }
+  user.password = newPassword
+  user.save({ ValidateBeforeSave: false })
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed succesfully"))
+
+
+})
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res.status(200)
+    .json(200, req.user, "current user fetched successfuly")
+})
+
+const updateAccountDetail = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.user
+
+  if (!fullName || !email) {
+    throw new ApiError(400, "email and password both are required")
+  }
+
+  const user = User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email
+      }
+    },
+    {
+      new: true /*By default, findOneAndUpdate() returns the  document as it was before update was applied. If you set new: true, findOneAndUpdate() will instead give you the object after update was applied.*/
+    }
+  ).select("-password")
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details Updated Successfully"))
+})
+
+const updateUserAvatar = asyncHandler(async(req, res) => {
+
+  const avatarLocalPath = req.file?.path
+  if(!avatarLocalPath){
+    throw new ApiError(400, "avatar is missing")
+  }
+  const avatar = await uploadOnCloudinary(avatarLocalPath)
+  if(!avatar.url){
+    throw new ApiError(400, "Error while uploding avatar")
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, {
+    $set: {
+      avatar: avatar.url
+    }
+  }, {
+    new: true
+  }).select("-password")
+})
+
+
+const updateUserCoverImage = asyncHandler(async(req, res) => {
+
+  const coverImageLocalPath = req.file?.path
+  if(!coverImageLocalPath){
+    throw new ApiError(400, "coverImage is missing")
+  }
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+  if(!coverImage.url){
+    throw new ApiError(400, "Error while uploding coverImage")
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, {
+    $set: {
+      coverImage: coverImage.url
+    }
+  }, {
+    new: true
+  }).select("-password")
+
+  return res.status(200).json(new ApiResponse(200, user, "Cover image updated successfully"))
+})
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetail , updateUserAvatar};
